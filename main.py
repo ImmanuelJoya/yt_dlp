@@ -20,11 +20,12 @@ def format_duration(seconds):
 
 
 class YouTubeDownloaderApp:
-    def __init__(self, root):
+    def __init__(self, root, placeholder="Enter YouTube URLs here..."):
         self.root = root
         self.root.title("YouTube Downloader")
         self.root.geometry("700x620")
         self.root.resizable(False, False)
+        self.placeholder = placeholder
 
         self.create_widgets()
 
@@ -38,6 +39,8 @@ class YouTubeDownloaderApp:
         ttk.Label(self.root, text="Enter YouTube URLs (one per line):").pack(anchor="w", padx=20)
         self.url_text = tk.Text(self.root, height=8, width=80)
         self.url_text.pack(padx=20)
+        ##placeholder text
+        self.url_text.insert(tk.END, self.placeholder)
 
         # Buttons frame
         btn_frame = ttk.Frame(self.root)
