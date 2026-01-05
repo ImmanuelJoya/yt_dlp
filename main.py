@@ -3,6 +3,9 @@ from tkinter import ttk, messagebox
 import yt_dlp
 import threading
 import os
+from PIL import Image, ImageTk
+import urllib.request
+import io
 
 DOWNLOAD_DIR = "downloads"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
@@ -22,13 +25,34 @@ class YouTubeDownloaderApp:
     def __init__(self, root, placeholder="Enter YouTube URLs here..."):
         self.root = root
         self.root.title("YouTube Downloader")
-        self.root.geometry("700x620")
+        self.root.geometry("700x680")
         self.root.resizable(False, False)
 
         self.placeholder = placeholder
+        self.thumbnail_img = None
+
         self.create_widgets()
 
-    # ------------------ Progress Handling ------------------
+    # ------------------ Thumbnail ------------------
+    def set_thumbnail(self, url=None):
+        if not url:
+            self.thumbnail_label.config(image="")
+            return
+
+        try:
+            with urllib.request.urlopen(url) as u:
+                raw_data = u.read()
+
+            image = Image.open(io.BytesIO(raw_data))
+            image = image.resize((200, 120), Image.LANCZOS)
+
+            self.thumbnail_img = ImageTk.PhotoImage(image)
+            self.thumbnail_label.config(image=self.thumbnail_img)
+
+        except Exception:
+            self.thumbnail_label.config(image="")
+
+    # ------------------ Progress ------------------
     def progress_hook(self, d):
         if d["status"] == "downloading":
             percent = d.get("_percent_str", "0%").replace("%", "").strip()
@@ -96,6 +120,13 @@ class YouTubeDownloaderApp:
         )
         self.download_btn.grid(row=0, column=3, padx=5)
 
+        # Thumbnail preview
+        thumb_frame = ttk.Frame(self.root)
+        thumb_frame.pack(padx=20, pady=5, anchor="w")
+
+        self.thumbnail_label = ttk.Label(thumb_frame)
+        self.thumbnail_label.pack()
+
         # Progress
         progress_frame = ttk.Frame(self.root)
         progress_frame.pack(pady=10, padx=20, fill="x")
@@ -115,7 +146,7 @@ class YouTubeDownloaderApp:
         self.eta_label = ttk.Label(progress_frame, text="ETA: --")
         self.eta_label.pack(anchor="w")
 
-        # Info box
+        # Info
         ttk.Label(
             self.root, text="Video / Audio Info:",
             font=("Arial", 12, "bold")
@@ -127,7 +158,7 @@ class YouTubeDownloaderApp:
         )
         self.info_box.pack(padx=20, pady=5)
 
-        # Status box
+        # Status
         ttk.Label(self.root, text="Status:").pack(anchor="w", padx=20)
         self.status_text = tk.Text(
             self.root, height=8, width=80, state="disabled"
@@ -150,18 +181,16 @@ class YouTubeDownloaderApp:
     # ------------------ Fetch Info ------------------
     def fetch_info(self):
         urls = self.url_text.get("1.0", tk.END).strip().splitlines()
-
-        if not urls or urls == [""]:
+        if not urls:
             messagebox.showerror("Error", "Please enter at least one YouTube URL.")
             return
 
-        url = urls[0].strip()
         self.fetch_btn.config(state="disabled")
         self.set_info("Fetching video information...\n")
 
         threading.Thread(
             target=self._fetch_info_thread,
-            args=(url,),
+            args=(urls[0].strip(),),
             daemon=True
         ).start()
 
@@ -181,13 +210,14 @@ class YouTubeDownloaderApp:
                 f"Likes: {info.get('like_count', 'N/A')}\n"
                 f"Dislikes: {info.get('dislike_count', 'N/A')}\n"
                 f"Channel: {info.get('uploader', 'Unknown')}\n"
-                f"Thumbnail URL: {info.get('thumbnail', 'N/A')}\n"
             )
 
             self.root.after(0, self.set_info, text)
+            self.root.after(0, self.set_thumbnail, info.get("thumbnail"))
 
         except Exception as e:
             self.root.after(0, self.set_info, f"Failed to fetch info:\n{e}")
+            self.root.after(0, self.set_thumbnail, None)
 
         finally:
             self.root.after(0, lambda: self.fetch_btn.config(state="normal"))
@@ -195,8 +225,7 @@ class YouTubeDownloaderApp:
     # ------------------ Download ------------------
     def start_download(self):
         urls = self.url_text.get("1.0", tk.END).strip().splitlines()
-
-        if not urls or urls == [""]:
+        if not urls:
             messagebox.showerror("Error", "Please enter at least one YouTube URL.")
             return
 
@@ -222,11 +251,16 @@ class YouTubeDownloaderApp:
                     ydl_opts = {
                         "format": "bestaudio/best",
                         "outtmpl": f"{DOWNLOAD_DIR}/%(title)s.%(ext)s",
-                        "postprocessors": [{
-                            "key": "FFmpegExtractAudio",
-                            "preferredcodec": "mp3",
-                            "preferredquality": "192",
-                        }],
+                        "writethumbnail": True,
+                        "postprocessors": [
+                            {
+                                "key": "FFmpegExtractAudio",
+                                "preferredcodec": "mp3",
+                                "preferredquality": "192",
+                            },
+                            {"key": "EmbedThumbnail"},
+                            {"key": "FFmpegMetadata"},
+                        ],
                         "progress_hooks": [self.progress_hook],
                         "quiet": True,
                         "no_warnings": True,
@@ -236,6 +270,8 @@ class YouTubeDownloaderApp:
                         "format": "bestvideo+bestaudio/best",
                         "merge_output_format": "mp4",
                         "outtmpl": f"{DOWNLOAD_DIR}/%(title)s.%(ext)s",
+                        "writethumbnail": True,
+                        "embedthumbnail": True,
                         "progress_hooks": [self.progress_hook],
                         "quiet": True,
                         "no_warnings": True,
