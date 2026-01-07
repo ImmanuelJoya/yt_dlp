@@ -45,6 +45,7 @@ Built using **Tkinter** for the GUI and **yt-dlp** for reliable YouTube extracti
 - **Tkinter** – GUI framework
 - **yt-dlp** – YouTube downloading engine
 - **FFmpeg** – Audio conversion & video merging
+- **Pillow**
 
 ---
 
@@ -70,9 +71,10 @@ YouTubeDownloader/
 Verify:
 ```bash
 py --version
-
+```
 ## Installing yt-dlp
 ```bash
 pip install yt-dlp
-
+```
 ## FFmpeg (Required)
+
