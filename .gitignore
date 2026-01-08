@@ -1,1 +1,12 @@
-downloads/
+downloads/# Python
+__pycache__/
+*.pyc
+
+# PyInstaller
+build/
+dist/
+*.spec
+
+# Virtual env
+venv/
+.env
