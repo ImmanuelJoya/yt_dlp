@@ -14,7 +14,7 @@ Built using **Tkinter** for the GUI and **yt-dlp** for reliable YouTube extracti
 
 ## 📸 Application Preview
 
-![Application Output](assets/img.png)
+![Application Output](assets/immg.png)
 
 > ℹ️ This screenshot shows the GUI displaying video metadata such as title, duration, views, and likes before downloading.
 
