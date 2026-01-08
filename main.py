@@ -28,10 +28,41 @@ class YouTubeDownloaderApp:
         self.root.geometry("700x680")
         self.root.resizable(False, False)
 
+        self.dark_mode = False
+        self.style = ttk.Style(self.root)
+
         self.placeholder = placeholder
         self.thumbnail_img = None
 
         self.create_widgets()
+        self.apply_theme()
+
+    # ------------------ Theme ------------------
+    def toggle_theme(self):
+        self.dark_mode = not self.dark_mode
+        self.apply_theme()
+
+    def apply_theme(self):
+        if self.dark_mode:
+            bg = "#1e1e1e"
+            fg = "#ffffff"
+            box_bg = "#2d2d2d"
+        else:
+            bg = "#f0f0f0"
+            fg = "#000000"
+            box_bg = "#ffffff"
+
+        self.root.configure(bg=bg)
+
+        self.style.configure("TLabel", background=bg, foreground=fg)
+        self.style.configure("TFrame", background=bg)
+        self.style.configure("TRadiobutton", background=bg, foreground=fg)
+        self.style.configure("TButton", background=bg)
+
+        self.url_text.configure(bg=box_bg, fg=fg, insertbackground=fg)
+        self.info_box.configure(bg=box_bg, fg=fg)
+        self.status_text.configure(bg=box_bg, fg=fg)
+        self.thumbnail_label.configure(background=bg)
 
     # ------------------ Thumbnail ------------------
     def set_thumbnail(self, url=None):
@@ -105,36 +136,26 @@ class YouTubeDownloaderApp:
 
         self.download_type = tk.StringVar(value="video")
 
-        ttk.Radiobutton(
-            btn_frame, text="Video (MP4)",
-            variable=self.download_type, value="video"
-        ).grid(row=0, column=1, padx=5)
+        ttk.Radiobutton(btn_frame, text="Video (MP4)", variable=self.download_type, value="video").grid(row=0, column=1, padx=5)
+        ttk.Radiobutton(btn_frame, text="Audio (MP3)", variable=self.download_type, value="audio").grid(row=0, column=2, padx=5)
 
-        ttk.Radiobutton(
-            btn_frame, text="Audio (MP3)",
-            variable=self.download_type, value="audio"
-        ).grid(row=0, column=2, padx=5)
-
-        self.download_btn = ttk.Button(
-            btn_frame, text="Start Download", command=self.start_download
-        )
+        self.download_btn = ttk.Button(btn_frame, text="Start Download", command=self.start_download)
         self.download_btn.grid(row=0, column=3, padx=5)
 
-        # Thumbnail preview
+        self.theme_btn = ttk.Button(btn_frame, text="🌙 Dark Mode", command=self.toggle_theme)
+        self.theme_btn.grid(row=0, column=4, padx=5)
+
         thumb_frame = ttk.Frame(self.root)
         thumb_frame.pack(padx=20, pady=5, anchor="w")
 
         self.thumbnail_label = ttk.Label(thumb_frame)
         self.thumbnail_label.pack()
 
-        # Progress
         progress_frame = ttk.Frame(self.root)
         progress_frame.pack(pady=10, padx=20, fill="x")
 
         self.progress_var = tk.DoubleVar()
-        self.progress_bar = ttk.Progressbar(
-            progress_frame, variable=self.progress_var, maximum=100
-        )
+        self.progress_bar = ttk.Progressbar(progress_frame, variable=self.progress_var, maximum=100)
         self.progress_bar.pack(fill="x")
 
         self.progress_label = ttk.Label(progress_frame, text="Progress: 0%")
@@ -146,23 +167,14 @@ class YouTubeDownloaderApp:
         self.eta_label = ttk.Label(progress_frame, text="ETA: --")
         self.eta_label.pack(anchor="w")
 
-        # Info
-        ttk.Label(
-            self.root, text="Video / Audio Info:",
-            font=("Arial", 12, "bold")
-        ).pack(anchor="w", padx=20, pady=(10, 0))
+        ttk.Label(self.root, text="Video / Audio Info:", font=("Arial", 12, "bold")).pack(anchor="w", padx=20, pady=(10, 0))
 
-        self.info_box = tk.Text(
-            self.root, height=8, width=80,
-            state="disabled", bg="#f5f5f5"
-        )
+        self.info_box = tk.Text(self.root, height=8, width=80, state="disabled")
         self.info_box.pack(padx=20, pady=5)
 
-        # Status
         ttk.Label(self.root, text="Status:").pack(anchor="w", padx=20)
-        self.status_text = tk.Text(
-            self.root, height=8, width=80, state="disabled"
-        )
+
+        self.status_text = tk.Text(self.root, height=8, width=80, state="disabled")
         self.status_text.pack(padx=20, pady=5)
 
     # ------------------ Helpers ------------------
@@ -188,27 +200,18 @@ class YouTubeDownloaderApp:
         self.fetch_btn.config(state="disabled")
         self.set_info("Fetching video information...\n")
 
-        threading.Thread(
-            target=self._fetch_info_thread,
-            args=(urls[0].strip(),),
-            daemon=True
-        ).start()
+        threading.Thread(target=self._fetch_info_thread, args=(urls[0].strip(),), daemon=True).start()
 
     def _fetch_info_thread(self, url):
         try:
-            with yt_dlp.YoutubeDL({
-                "quiet": True,
-                "no_warnings": True,
-                "skip_download": True
-            }) as ydl:
+            with yt_dlp.YoutubeDL({"quiet": True, "skip_download": True}) as ydl:
                 info = ydl.extract_info(url, download=False)
 
             text = (
-                f"Title: {info.get('title', 'Unknown')}\n"
+                f"Title: {info.get('title')}\n"
                 f"Duration: {format_duration(info.get('duration'))}\n"
                 f"Views: {info.get('view_count', 0):,}\n"
                 f"Likes: {info.get('like_count', 'N/A')}\n"
-                f"Dislikes: {info.get('dislike_count', 'N/A')}\n"
                 f"Channel: {info.get('uploader', 'Unknown')}\n"
             )
 
@@ -216,8 +219,7 @@ class YouTubeDownloaderApp:
             self.root.after(0, self.set_thumbnail, info.get("thumbnail"))
 
         except Exception as e:
-            self.root.after(0, self.set_info, f"Failed to fetch info:\n{e}")
-            self.root.after(0, self.set_thumbnail, None)
+            self.root.after(0, self.set_info, f"Error:\n{e}")
 
         finally:
             self.root.after(0, lambda: self.fetch_btn.config(state="normal"))
@@ -232,54 +234,40 @@ class YouTubeDownloaderApp:
         self.download_btn.config(state="disabled")
         self.log_status("Starting downloads...\n")
 
-        threading.Thread(
-            target=self.download_batch,
-            args=(urls,),
-            daemon=True
-        ).start()
+        threading.Thread(target=self.download_batch, args=(urls,), daemon=True).start()
 
     def download_batch(self, urls):
         for url in urls:
-            if not url.strip():
-                continue
-
             try:
-                self.log_status(f"Processing: {url}")
+                self.log_status(f"Downloading: {url}")
                 self.root.after(0, self.reset_progress)
 
+                ydl_opts = {
+                    "outtmpl": f"{DOWNLOAD_DIR}/%(title)s.%(ext)s",
+                    "progress_hooks": [self.progress_hook],
+                    "quiet": True,
+                }
+
                 if self.download_type.get() == "audio":
-                    ydl_opts = {
+                    ydl_opts.update({
                         "format": "bestaudio/best",
-                        "outtmpl": f"{DOWNLOAD_DIR}/%(title)s.%(ext)s",
                         "writethumbnail": True,
                         "postprocessors": [
-                            {
-                                "key": "FFmpegExtractAudio",
-                                "preferredcodec": "mp3",
-                                "preferredquality": "192",
-                            },
+                            {"key": "FFmpegExtractAudio", "preferredcodec": "mp3"},
                             {"key": "EmbedThumbnail"},
                             {"key": "FFmpegMetadata"},
                         ],
-                        "progress_hooks": [self.progress_hook],
-                        "quiet": True,
-                        "no_warnings": True,
-                    }
+                    })
                 else:
-                    ydl_opts = {
+                    ydl_opts.update({
                         "format": "bestvideo+bestaudio/best",
                         "merge_output_format": "mp4",
-                        "outtmpl": f"{DOWNLOAD_DIR}/%(title)s.%(ext)s",
                         "writethumbnail": True,
-                        "embedthumbnail": True,
-                        "progress_hooks": [self.progress_hook],
-                        "quiet": True,
-                        "no_warnings": True,
-                    }
+                    })
 
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     info = ydl.extract_info(url, download=True)
-                    self.log_status(f"✅ Downloaded: {info.get('title', 'Unknown')}")
+                    self.log_status(f"✅ Downloaded: {info.get('title')}")
 
             except Exception as e:
                 self.log_status(f"❌ Error: {e}")
