@@ -303,9 +303,9 @@ class MainView:
 
         self.controller.download(url, opts)
 
-    # =========================
+    
     # UI Updates (Called by Controller)
-    # =========================
+    # ========≠==========
     def update_video_info(self, info):
         self.title_label.config(text=info.get("title", "Unknown"))
         self.channel_label.config(text=f"📺 {info.get('uploader', 'Unknown')}")
@@ -358,9 +358,9 @@ class MainView:
     def enable_download(self):
         self.download_btn.config(state="enabled")
 
-    # =========================
+    
     # Theme & Styling
-    # =========================
+    # =====================
     def _apply_modern_theme(self):
         style = ttk.Style()
         
@@ -452,7 +452,7 @@ class MainView:
             darkcolor=accent
         )
 
-    # =========================
+    
     # Helpers
     # =========================
     def _set_type(self, t):
